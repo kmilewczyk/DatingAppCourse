@@ -1,6 +1,14 @@
+using System.Text;
 using API.Data;
+using API.Extension;
+using API.Interfaces;
+using API.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace API;
 
@@ -17,20 +25,16 @@ public class Startup
     public void ConfigureServices(IServiceCollection services)
     {
 
-        services.AddControllers();
+        services.AddApplicationServices(_config) 
+            .AddControllers();
         
-        services.AddSwaggerGen(c =>
-        {
-            c.SwaggerDoc("v1", new OpenApiInfo { Title = "WebAPIv5", Version = "v1" });
-        });
-        
-        services.AddDbContext<DataContext>(options =>
-        {
-            options.UseSqlite(_config.GetConnectionString("DefaultConnection"));
-        });
+        services.AddApplicationSwaggerGen();
 
         services.AddCors();
+
+        services.AddIdentityServices(_config);
     }
+
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -39,7 +43,11 @@ public class Startup
         {
             app.UseDeveloperExceptionPage();
             app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "WebAPIv5 v1"));
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "WebAPIv5 v1");
+            });
+            
         }
 
         app.UseHttpsRedirection();
@@ -47,7 +55,8 @@ public class Startup
         app.UseRouting();
 
         app.UseCors(policy => policy.AllowAnyHeader().AllowAnyMethod().WithOrigins("https://localhost:4200"));
-        
+
+        app.UseAuthentication();
         app.UseAuthorization();
 
         app.UseEndpoints(endpoints =>

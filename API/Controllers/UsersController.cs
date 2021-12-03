@@ -1,13 +1,13 @@
 ﻿using API.Data;
+using API.DTOs;
 using API.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-public class UsersController : Controller
+public class UsersController : BaseApiController
 {
     private readonly DataContext _context;
 
@@ -17,10 +17,21 @@ public class UsersController : Controller
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<AppUser>>> GetUsersAsync()
         => await _context.Users.ToListAsync(HttpContext.RequestAborted);
 
+    [Authorize]
     [HttpGet("{id}")]
-    public async Task<ActionResult<AppUser>> GetUserAsync(int id)
-        => await _context.Users.FindAsync(id, HttpContext.RequestAborted);
+    public async Task<ActionResult> GetUserAsync(int id)
+    {
+        var user = await _context.Users.FindAsync(new object?[] {id}, cancellationToken: HttpContext.RequestAborted);
+
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        return new JsonResult(user);
+    }
 }
