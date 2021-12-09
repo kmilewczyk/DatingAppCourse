@@ -16,7 +16,6 @@ import { AccountService } from './account.service';
 })
 export class MembersService {
   baseUrl = environment.apiUrl;
-  members: Member[] = [];
   memberCache = new Map();
   user: User;
   userParams: UserParams;
@@ -62,6 +61,18 @@ export class MembersService {
     );
   }
 
+  addLike(username: string) {
+    // TODO: Add css for liked and remove likes
+    return this.http.post(this.baseUrl + 'likes/' + username, {});
+  }
+
+  getLikes(predicate: string, pageNumber, pageSize) {
+    let params = this.getPaginationHeaders(pageNumber, pageSize);
+    params = params.append('predicate', predicate);
+
+    return this.getPaginatedResult<Partial<Member[]>>(this.baseUrl + 'likes', params);
+  }
+
   private getPaginationHeaders(pageNumber: number, pageSize: number) {
       let params = new HttpParams;
       params = params.append('pageNumber', pageNumber.toString())
@@ -82,12 +93,7 @@ export class MembersService {
   }
 
   updateMember(member: Member) {
-    return this.http.put(this.baseUrl + 'users', member).pipe(
-      map(() => {
-        const index = this.members.indexOf(member);
-        this.members[index] = member;
-      })
-    );
+    return this.http.put(this.baseUrl + 'users', member);
   }
 
   setMainPhoto(photoId: number) {
