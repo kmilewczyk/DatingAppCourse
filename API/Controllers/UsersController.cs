@@ -19,27 +19,30 @@ public class UsersController : BaseApiController
     private readonly IUserRepository _userRepository;
     private readonly IMapper _mapper;
     private readonly IPhotoService _photoService;
+    private readonly ILikesRepository _likesRepository;
 
-    public UsersController(IUserRepository userRepository, IMapper mapper, IPhotoService photoService)
+    public UsersController(IUserRepository userRepository, IMapper mapper, IPhotoService photoService,
+        ILikesRepository likesRepository)
     {
         _userRepository = userRepository;
         _mapper = mapper;
         _photoService = photoService;
+        _likesRepository = likesRepository;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<MemberDto>>> GetUsersAsync([FromQuery]UserParams userParams)
+    public async Task<ActionResult<IEnumerable<MemberDto>>> GetUsersAsync([FromQuery] UserParams userParams)
     {
         var user = await _userRepository.GetUserByUsernameAsync(User.GetUsername());
         userParams.CurrentUsername = user.UserName;
 
         if (string.IsNullOrEmpty(userParams.Gender))
             userParams.Gender = user.Gender == "male" ? "female" : "male";
-        
+
         var members = await _userRepository.GetMembersAsync(userParams);
-        
+
         Response.AddPaginationHeader(members.CurrentPage, members.PageSize, members.TotalCount, members.TotalPages);
-        
+
         return Ok(members);
     }
 
@@ -62,7 +65,7 @@ public class UsersController : BaseApiController
         var user = await _userRepository.GetUserByUsernameAsync(User.GetUsername());
 
         _mapper.Map(memberUpdateDto, user);
-        
+
         _userRepository.Update(user);
 
         if (await _userRepository.SaveAllAsync()) return NoContent();
@@ -95,7 +98,7 @@ public class UsersController : BaseApiController
 
         if (await _userRepository.SaveAllAsync())
         {
-            return CreatedAtRoute("GetUser", new { username = user.UserName }, _mapper.Map<PhotoDto>(photo));
+            return CreatedAtRoute("GetUser", new {username = user.UserName}, _mapper.Map<PhotoDto>(photo));
         }
 
         return BadRequest("Problem adding photo.");
@@ -115,7 +118,7 @@ public class UsersController : BaseApiController
         var currentMain = user.Photos.FirstOrDefault(x => x.IsMain);
 
         if (currentMain != null) currentMain.IsMain = false;
-        
+
         photo.IsMain = true;
 
         if (await _userRepository.SaveAllAsync()) return NoContent();

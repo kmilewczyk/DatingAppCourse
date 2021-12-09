@@ -1,5 +1,7 @@
-﻿using API.DTOs;
+﻿using System.Linq.Expressions;
+using API.DTOs;
 using API.Entities;
+using API.Extension;
 using API.Helpers;
 using API.Interfaces;
 using AutoMapper;
@@ -66,8 +68,10 @@ public class UserRepository : IUserRepository
             _ => query.OrderByDescending(u => u.LastActive)
         };
 
+        var memberDtoQuery = query.ProjectTo<MemberDto>(_mapper.ConfigurationProvider).AsNoTracking();
+
         return await PagedList<MemberDto>.CreateAsync(
-            query.ProjectTo<MemberDto>(_mapper.ConfigurationProvider).AsNoTracking(),
+            memberDtoQuery,
             userParams.PageNumber, userParams.PageSize);
     }
 

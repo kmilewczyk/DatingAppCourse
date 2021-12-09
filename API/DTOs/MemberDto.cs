@@ -18,4 +18,5 @@ public class MemberDto
     public string City { get; set; }
     public string Country { get; set; }
     public ICollection<PhotoDto> Photos { get; set; }
+    public bool Liked { get; set; }
 }
