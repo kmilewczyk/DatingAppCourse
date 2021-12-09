@@ -68,10 +68,16 @@ public class UserRepository : IUserRepository
             _ => query.OrderByDescending(u => u.LastActive)
         };
 
-        var memberDtoQuery = query.ProjectTo<MemberDto>(_mapper.ConfigurationProvider).AsNoTracking();
+        query = query.Include(src => src.Photos);
 
+        var memberDtoQuery =
+            from user in query
+            join like in _context.Likes on user.Id equals like.LikedUserId into gj
+            from likeJoin in gj.DefaultIfEmpty()
+            select MapLeftJoinToUser(user, likeJoin != null, _mapper);
+                
         return await PagedList<MemberDto>.CreateAsync(
-            memberDtoQuery,
+            memberDtoQuery.AsNoTracking(),
             userParams.PageNumber, userParams.PageSize);
     }
 
@@ -82,4 +88,13 @@ public class UserRepository : IUserRepository
             .ProjectTo<MemberDto>(_mapper.ConfigurationProvider)
             .SingleOrDefaultAsync();
     }
+
+    private static MemberDto MapLeftJoinToUser(AppUser user, bool liked, IMapper mapper)
+    {
+        var userDto = mapper.Map<MemberDto>(user);
+        userDto.Liked = liked;
+
+        return userDto;
+    }
+
 }
