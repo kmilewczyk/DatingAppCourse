@@ -6,6 +6,7 @@ using API.Interfaces;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 namespace API.Data;
 
@@ -80,36 +81,28 @@ public class UserRepository : IUserRepository
         // Paginate
         query = query.Skip((userParams.PageNumber - 1) * userParams.PageSize).Take(userParams.PageSize);
 
-        // From the paginated users, left join them on the likes they received
-        // Map the result to MemberDto, with Like field if they were liked by the current user
-        // The result has duplicates from the join, as it now contains all users and their duplicates for each like
-        // they received.
-        var memberDtoQuery =
-            from user in query 
-            join like in _context.Likes on user.Id equals like.LikedUserId into gj
-            from likeJoin in gj.DefaultIfEmpty()
-            select MapLeftJoinToMemberDto(user,
-                likeJoin != null && likeJoin.SourceUserId == userParams.CurrentUserId,
-                _mapper);
+        // NOTE: joining and union cannot be done in pure LINQ due to https://github.com/dotnet/efcore/issues/16243
+        
+        var memberDtoQuery = query.ProjectTo<MemberDto>(_mapper.ConfigurationProvider).AsNoTracking();
 
-        // var likedGroupBy =
-        //     from m in memberDtoQuery
-        //     group m by new
-        //     {
-        //         Id = m.Id, Liked = m.Liked
-        //     }
-        //     into g
-        //     select new { g.Key.Id, g.Any(g.Key.Liked)};
-        //
-        // memberDtoQuery =
-        //     from user in memberDtoQuery
-        //     join g in likedGroupBy on user.Id equals g.Id
-        //     select AddLikedToMemberDto(user, g.Liked);
+        // Get members that were liked by the current user.
+        var likedMemberDtoQuery = query
+            .Join(
+                _context.Likes,
+                user => user.Id,
+                like => like.LikedUserId,
+                (user, like) => new { user, like })
+            .Where(join => join.like.SourceUserId == userParams.CurrentUserId)
+            .Select(join => MapLeftJoinToMemberDto(join.user, true, _mapper));
 
-        // Execute the query.
-        var list = await memberDtoQuery.ToListAsync();
+        var likedMemberDto = await likedMemberDtoQuery.AsNoTracking().ToListAsync();
 
-        // Before returning, remove (in memory) duplicates that consists of people who were liked more than once.
+        // Join the two sets and sort them
+        var list = (await memberDtoQuery.ToListAsync())
+            .Concat(likedMemberDto)
+            .OrderBy(m => m.Id);
+        
+        // Return a paged list, but first remove duplicates that came from memberDtoQuery.
         return new PagedList<MemberDto>(FilterJoinDuplicates(list), count, userParams.PageNumber, userParams.PageSize);
     }
 
@@ -135,6 +128,11 @@ public class UserRepository : IUserRepository
         return member;
     }
 
+    /// <summary>
+    /// Filters our duplicates. Chooses the duplicate with Liked field set to true.
+    /// </summary>
+    /// <param name="list">Ordered list</param>
+    /// <returns>Unique list with members have set Liked to true if they were liked.</returns>
     private IEnumerable<MemberDto> FilterJoinDuplicates(IEnumerable<MemberDto> list)
     {
         MemberDto currentMember = null;
