@@ -13,13 +13,13 @@ public static class ApplicationServiceExtensions
     public static IServiceCollection AddApplicationServices(this IServiceCollection services,
         IConfiguration config)
     {
-
         services.Configure<CloudinarySettings>(config.GetSection("CloudinarySettings"));
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPhotoService, PhotoService>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<LogUserActivity>();
         services.AddScoped<ILikesRepository, LikesRepository>();
+        services.AddScoped<IMessageRepository, MessageRepository>();
         
         services.AddAutoMapper(typeof(AutoMapperProfiles).Assembly);
         
@@ -36,6 +36,7 @@ public static class ApplicationServiceExtensions
         services.AddSwaggerGen(c =>
         {
             c.SwaggerDoc("v1", new OpenApiInfo {Title = "WebAPIv5", Version = "v1"});
+            c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "DatingApi.xml"), true);
             c.AddSecurityDefinition("jwtAuth", new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.Http,
