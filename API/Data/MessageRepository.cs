@@ -31,7 +31,10 @@ public class MessageRepository : IMessageRepository
 
     public async Task<Message> GetMessage(int id)
     {
-        return await _context.Messages.FindAsync(id);
+        return await _context.Messages
+            .Include(u => u.Sender)
+            .Include(u => u.Recipient)
+            .SingleOrDefaultAsync(x => x.Id == id);
     }
 
     public async Task<PagedList<MessageDto>> GetMessagesForUser(MessageParams messageParams)
@@ -42,9 +45,13 @@ public class MessageRepository : IMessageRepository
 
         query = messageParams.Container switch
         {
-            "Inbox" => query.Where(user => user.Recipient.UserName == messageParams.Username),
-            "Outbox" => query.Where(user => user.Sender.UserName == messageParams.Username),
-            _ => query.Where(user => user.Recipient.UserName == messageParams.Username && user.DateRead == null)
+            "Inbox" => query.Where(user
+                => user.Recipient.UserName == messageParams.Username && user.RecipientDeleted == false),
+            "Outbox" => query.Where(user
+                => user.Sender.UserName == messageParams.Username && user.SenderDeleted == false),
+            _ => query.Where(user
+                => user.Recipient.UserName == messageParams.Username && user.RecipientDeleted == false &&
+                   user.DateRead == null)
         };
 
         var messages = query.ProjectTo<MessageDto>(_mapper.ConfigurationProvider);
@@ -58,8 +65,10 @@ public class MessageRepository : IMessageRepository
             .Include(u => u.Sender).ThenInclude(p => p.Photos)
             .Include(u => u.Recipient).ThenInclude(p => p.Photos)
             .Where(m =>
-                m.Recipient.UserName == currentUsername && m.Sender.UserName == recipientUsername
-                || m.Recipient.UserName == recipientUsername && m.Sender.UserName == currentUsername)
+                m.Recipient.UserName == currentUsername && m.RecipientDeleted == false &&
+                m.Sender.UserName == recipientUsername
+                || m.Recipient.UserName == recipientUsername && m.Sender.UserName == currentUsername &&
+                m.SenderDeleted == false)
             .OrderBy(m => m.MessageSent)
             .ToListAsync();
 
@@ -77,7 +86,6 @@ public class MessageRepository : IMessageRepository
         }
 
         return _mapper.Map<IEnumerable<MessageDto>>(messages);
-
     }
 
     public async Task<bool> SaveAllAsync()
