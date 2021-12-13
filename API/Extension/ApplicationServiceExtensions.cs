@@ -1,7 +1,9 @@
 ﻿using API.Data;
+using API.Entities;
 using API.Helpers;
 using API.Interfaces;
 using API.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
@@ -13,6 +15,7 @@ public static class ApplicationServiceExtensions
     public static IServiceCollection AddApplicationServices(this IServiceCollection services,
         IConfiguration config)
     {
+        
         services.Configure<CloudinarySettings>(config.GetSection("CloudinarySettings"));
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPhotoService, PhotoService>();
@@ -20,9 +23,9 @@ public static class ApplicationServiceExtensions
         services.AddScoped<LogUserActivity>();
         services.AddScoped<ILikesRepository, LikesRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
-        
+
         services.AddAutoMapper(typeof(AutoMapperProfiles).Assembly);
-        
+
         services.AddDbContext<DataContext>(options =>
         {
             options.UseSqlite(config.GetConnectionString("DefaultConnection"));
@@ -30,7 +33,7 @@ public static class ApplicationServiceExtensions
 
         return services;
     }
-    
+
     public static IServiceCollection AddApplicationSwaggerGen(this IServiceCollection services)
     {
         services.AddSwaggerGen(c =>
@@ -48,7 +51,7 @@ public static class ApplicationServiceExtensions
 
             c.OperationFilter<SecurityRequirementsOperationFilter>(true, "jwtAuth");
         });
-        
+
         return services;
     }
 }
