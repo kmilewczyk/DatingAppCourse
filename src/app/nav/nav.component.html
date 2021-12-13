@@ -16,10 +16,13 @@
             <li class="nav-item">
                 <a class="nav-link" routerLink='/errors' routerLinkActive='active'>Errors</a>
             </li>
+            <li *appHasRole="['Admin', 'Moderator']" class="nav-item">
+                <a class="nav-link" routerLink='/admin' routerLinkActive='active'>Admin</a>
+            </li>
         </ul>
 
         <div class="dropdown" *ngIf="(accountService.currentUser$ | async) as user" dropdown>
-            <a class="dropdown-toggle text-light" dropdownToggle>Welcome {{ user.knownAs | titlecase }} </a>
+            <a class="dropdown-toggle text-light" dropdownToggle>Welcome {{ user.knownAs || user.username | titlecase }} </a>
             <img class="ml-2" src="{{ user.photoUrl || './assets/user.png'}}" alt="{{ user.username }}">
             <div class="dropdown-menu mt-3" *dropdownMenu>
                 <a routerLink='/member/edit/' class="dropdown-item">Edit Profile</a>
