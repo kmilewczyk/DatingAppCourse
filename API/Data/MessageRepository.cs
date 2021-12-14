@@ -69,22 +69,21 @@ public class MessageRepository : IMessageRepository
     {
         var query = _context.Messages
             .OrderByDescending(m => m.MessageSent)
+            .ProjectTo<MessageDto>(_mapper.ConfigurationProvider)
             .AsQueryable();
 
         query = messageParams.Container switch
         {
             "Inbox" => query.Where(user
-                => user.Recipient.UserName == messageParams.Username && user.RecipientDeleted == false),
+                => user.RecipientUsername == messageParams.Username && user.RecipientDeleted == false),
             "Outbox" => query.Where(user
-                => user.Sender.UserName == messageParams.Username && user.SenderDeleted == false),
+                => user.SenderUsername == messageParams.Username && user.SenderDeleted == false),
             _ => query.Where(user
-                => user.Recipient.UserName == messageParams.Username && user.RecipientDeleted == false &&
+                => user.RecipientUsername == messageParams.Username && user.RecipientDeleted == false &&
                    user.DateRead == null)
         };
 
-        var messages = query.ProjectTo<MessageDto>(_mapper.ConfigurationProvider);
-
-        return await PagedList<MessageDto>.CreateAsync(messages, messageParams.PageNumber, messageParams.PageSize);
+        return await PagedList<MessageDto>.CreateAsync(query, messageParams.PageNumber, messageParams.PageSize);
     }
 
     public async Task<IEnumerable<MessageDto>> GetMessageThread(string currentUsername, string recipientUsername)
@@ -98,9 +97,10 @@ public class MessageRepository : IMessageRepository
                 || m.Recipient.UserName == recipientUsername && m.Sender.UserName == currentUsername &&
                 m.SenderDeleted == false)
             .OrderBy(m => m.MessageSent)
+            .ProjectTo<MessageDto>(_mapper.ConfigurationProvider)
             .ToListAsync();
 
-        var unreadMessages = messages.Where(m => m.DateRead == null && m.Recipient.UserName == currentUsername)
+        var unreadMessages = messages.Where(m => m.DateRead == null && m.RecipientUsername == currentUsername)
             .ToList();
 
         if (unreadMessages.Any())
@@ -109,15 +109,8 @@ public class MessageRepository : IMessageRepository
             {
                 message.DateRead = DateTime.UtcNow;
             }
-
-            await _context.SaveChangesAsync();
         }
 
-        return _mapper.Map<IEnumerable<MessageDto>>(messages);
-    }
-
-    public async Task<bool> SaveAllAsync()
-    {
-        return await _context.SaveChangesAsync() > 0;
+        return messages;
     }
 }
