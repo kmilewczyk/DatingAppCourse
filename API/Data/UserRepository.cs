@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using API.DTOs;
+using API.DTOs.Member;
 using API.Entities;
 using API.Helpers;
 using API.Interfaces;
@@ -33,9 +34,14 @@ public class UserRepository : IUserRepository
             .ToListAsync();
     }
 
-    public async Task<AppUser> GetUserByIdAsync(int id)
+    public async Task<AppUser> FindUserAsync(int id)
     {
         return await _context.Users.FindAsync(id);
+    }
+
+    public async Task<AppUser> GetUserWithPhotosAsync(int id)
+    {
+        return await _context.Users.Include(user => user.Photos).SingleOrDefaultAsync(user => user.Id == id);
     }
 
     public async Task<AppUser> GetUserByUsernameAsync(string username)
@@ -106,6 +112,15 @@ public class UserRepository : IUserRepository
         return await _context.Users
             .Where(x => x.UserName == username)
             .ProjectTo<MemberDto>(_mapper.ConfigurationProvider)
+            .SingleOrDefaultAsync();
+    }
+
+    public async Task<ProfileMemberDto?> GetCurrentMemberAsync(string username)
+    {
+        return await _context.Users
+            .IgnoreQueryFilters()
+            .Where(x => x.UserName == username)
+            .ProjectTo<ProfileMemberDto>(_mapper.ConfigurationProvider)
             .SingleOrDefaultAsync();
     }
 

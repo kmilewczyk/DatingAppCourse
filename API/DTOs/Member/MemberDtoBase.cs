@@ -1,8 +1,6 @@
-﻿using API.Entities;
+﻿namespace API.DTOs.Member;
 
-namespace API.DTOs;
-
-public class MemberDto
+public class MemberDtoBase
 {
     public int Id { get; set; }
     public string Username { get; set; }
@@ -17,6 +15,5 @@ public class MemberDto
     public string Interests { get; set; }
     public string City { get; set; }
     public string Country { get; set; }
-    public ICollection<PhotoDto> Photos { get; set; }
     public bool Liked { get; set; }
 }

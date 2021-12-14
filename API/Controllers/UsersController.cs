@@ -1,4 +1,5 @@
 ﻿using API.DTOs;
+using API.DTOs.Member;
 using API.Entities;
 using API.Extension;
 using API.Helpers;
@@ -43,14 +44,21 @@ public class UsersController : BaseApiController
     [HttpGet("{username}", Name = "GetUser")]
     public async Task<ActionResult> GetUser(string username)
     {
-        var member = await _unitOfWork.UserRepository.GetMemberAsync(username);
+        username = username.ToLowerInvariant();
+        
+        MemberDtoBase member = username switch
+        {
+            // Get fuller member for current user
+            var name when name == User.GetUsername() => await _unitOfWork.UserRepository.GetCurrentMemberAsync(username),
+            _ => await _unitOfWork.UserRepository.GetMemberAsync(username)
+        };
 
         if (member == null)
         {
             return NotFound();
         }
 
-        return new JsonResult(_mapper.Map<MemberDto>(member));
+        return new JsonResult(member);
     }
 
     [HttpPut]
@@ -68,7 +76,7 @@ public class UsersController : BaseApiController
     }
 
     [HttpPost("add-photo")]
-    public async Task<ActionResult<PhotoDto>> AddPhoto(IFormFile file)
+    public async Task<ActionResult<EditPhotoDto>> AddPhoto(IFormFile file)
     {
         var user = await _unitOfWork.UserRepository.GetUserByUsernameAsync(User.GetUsername());
 
@@ -81,12 +89,6 @@ public class UsersController : BaseApiController
             Url = result.SecureUrl.AbsoluteUri,
             PublicId = result.PublicId
         };
-
-        // User doesn't have any photos in the collection
-        if (user.Photos.Count == 0)
-        {
-            photo.IsMain = true;
-        }
 
         user.Photos.Add(photo);
 
@@ -108,6 +110,8 @@ public class UsersController : BaseApiController
         if (photo is null) return NotFound("Photo of id {photoId} doesn't exist.");
 
         if (photo.IsMain) return BadRequest("This is already your main photo.");
+
+        if (!photo.Approved) return BadRequest("The unapproved photos cannot be set as main photo.");
 
         var currentMain = user.Photos.FirstOrDefault(x => x.IsMain);
 

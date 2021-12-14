@@ -1,4 +1,8 @@
-﻿namespace API.DTOs;
+﻿using System.Text.Json.Serialization;
+
+#nullable enable
+
+namespace API.DTOs;
 
 public class PhotoDto
 {

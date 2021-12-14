@@ -16,6 +16,7 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int, IdentityUser
     public DbSet<Message> Messages { get; set; }
     public DbSet<Group> Groups { get; set; }
     public DbSet<Connection> Connections { get; set; }
+    public DbSet<Photo> Photos { get; set; }
 
     public DataContext(DbContextOptions options) : base(options)
     {
@@ -25,18 +26,40 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int, IdentityUser
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<AppUser>()
-            .HasMany(ur => ur.UserRoles)
-            .WithOne(u => u.User)
-            .HasForeignKey(ur => ur.UserId)
-            .IsRequired();
-        
+        modelBuilder.Entity<Photo>().HasQueryFilter(p => p.Approved);
+
+        AddUserRelationships(modelBuilder);
+        AddRoleRelationship(modelBuilder);
+        AddUserLikeRelationship(modelBuilder);
+        AddMessageRelationship(modelBuilder);
+
+        modelBuilder.ApplyUtcDateTimeConverter();
+    }
+
+    private static void AddRoleRelationship(ModelBuilder modelBuilder)
+    {
         modelBuilder.Entity<AppRole>()
             .HasMany(ur => ur.UserRoles)
             .WithOne(u => u.Role)
             .HasForeignKey(ur => ur.RoleId)
             .IsRequired();
-            
+    }
+
+    private static void AddMessageRelationship(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Message>()
+            .HasOne(u => u.Recipient)
+            .WithMany(m => m.MessagesReceived)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Message>()
+            .HasOne(u => u.Sender)
+            .WithMany(m => m.MessagesSent)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void AddUserLikeRelationship(ModelBuilder modelBuilder)
+    {
         modelBuilder.Entity<UserLike>()
             .HasKey(k => new {k.SourceUserId, k.LikedUserId});
 
@@ -53,18 +76,21 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int, IdentityUser
             .WithMany(l => l.LikedByUsers)
             .HasForeignKey(s => s.LikedUserId)
             .OnDelete(DeleteBehavior.Cascade);
+    }
 
-        modelBuilder.Entity<Message>()
-            .HasOne(u => u.Recipient)
-            .WithMany(m => m.MessagesReceived)
-            .OnDelete(DeleteBehavior.Restrict);
+    private static void AddUserRelationships(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<AppUser>()
+            .HasMany(u => u.Photos)
+            .WithOne(p => p.User)
+            .HasForeignKey(p => p.UserId)
+            .IsRequired(); // Might not be if photos were to independent of users.
 
-        modelBuilder.Entity<Message>()
-            .HasOne(u => u.Sender)
-            .WithMany(m => m.MessagesSent)
-            .OnDelete(DeleteBehavior.Restrict);
-        
-        modelBuilder.ApplyUtcDateTimeConverter();
+        modelBuilder.Entity<AppUser>()
+            .HasMany(ur => ur.UserRoles)
+            .WithOne(u => u.User)
+            .HasForeignKey(ur => ur.UserId)
+            .IsRequired();
     }
 }
 

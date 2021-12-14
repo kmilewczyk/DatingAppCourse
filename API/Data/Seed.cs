@@ -26,11 +26,14 @@ public class Seed
         {
             await roleManager.CreateAsync(role);
         }
-            
 
         foreach (var user in users)
         {
             user.UserName = user.UserName.ToLowerInvariant();
+            foreach (var userPhoto in user.Photos)
+            {
+                userPhoto.Approved = true;
+            }
 
             await userManager.CreateAsync(user, "password");
             await userManager.AddToRoleAsync(user, "Member");
