@@ -62,8 +62,8 @@ public class UserRepository : IUserRepository
         query = query.Where(u => u.Gender == userParams.Gender);
 
         // Filter by Date of Birth range
-        var minDob = DateTime.Today.AddYears(-userParams.MaxAge - 1);
-        var maxDob = DateTime.Today.AddYears(-userParams.MinAge);
+        var minDob = DateTime.Today.AddYears(-userParams.MaxAge - 1).ToUniversalTime();
+        var maxDob = DateTime.Today.AddYears(-userParams.MinAge).ToUniversalTime();
         query = query.Where(u => u.DateOfBirth >= minDob && u.DateOfBirth <= maxDob);
 
         // Aggregate now count of all users who match the criteria

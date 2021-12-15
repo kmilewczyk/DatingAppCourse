@@ -1,5 +1,6 @@
 ﻿using API.DTOs;
 using API.Entities;
+using API.Extension;
 using API.Helpers;
 using API.Interfaces;
 using AutoMapper;
@@ -96,20 +97,10 @@ public class MessageRepository : IMessageRepository
                 m.Sender.UserName == recipientUsername
                 || m.Recipient.UserName == recipientUsername && m.Sender.UserName == currentUsername &&
                 m.SenderDeleted == false)
+            .MarkUnreadAsRead(currentUsername)
             .OrderBy(m => m.MessageSent)
             .ProjectTo<MessageDto>(_mapper.ConfigurationProvider)
             .ToListAsync();
-
-        var unreadMessages = messages.Where(m => m.DateRead == null && m.RecipientUsername == currentUsername)
-            .ToList();
-
-        if (unreadMessages.Any())
-        {
-            foreach (var message in unreadMessages)
-            {
-                message.DateRead = DateTime.UtcNow;
-            }
-        }
 
         return messages;
     }

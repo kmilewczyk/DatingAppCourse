@@ -4,10 +4,29 @@ namespace API.Entities;
 
 public class AppUser : IdentityUser<int>
 {
-    public DateTime DateOfBirth { get; set; }
+    private DateTime _dateOfBirth;
+    private DateTime _created = DateTime.UtcNow;
+    private DateTime _lastActive = DateTime.UtcNow;
+
+    public DateTime DateOfBirth
+    {
+        get => _dateOfBirth;
+        set => _dateOfBirth = value.ToUniversalTime();
+    }
+
+    public DateTime Created
+    {
+        get => _created;
+        set => _created = value.ToUniversalTime();
+    }
+
+    public DateTime LastActive
+    {
+        get => _lastActive;
+        set => _lastActive = value.ToUniversalTime();
+    }
+
     public string KnownAs { get; set; }
-    public DateTime Created { get; set; } = DateTime.Now;
-    public DateTime LastActive { get; set; } = DateTime.Now;
     public string Gender { get; set; }
     public string Introduction { get; set; }
     public string LookingFor { get; set; }

@@ -27,6 +27,7 @@ public class UnitOfWork : IUnitOfWork
 
     public bool HasChanges()
     {
+        _context.ChangeTracker.DetectChanges();
         return _context.ChangeTracker.HasChanges();
     }
 }
